@@ -1,9 +1,9 @@
 package imagereader;
+
 import java.awt.*;
 import java.awt.image.*;
 import java.io.*;
 import javax.swing.*;
-
 
 public class Image_Reader {
 
@@ -11,44 +11,44 @@ public class Image_Reader {
 	JLabel lbIm1;
 	JLabel lbIm2;
 	BufferedImage img;
+	BufferedImage img2;
+	double Cosines[][] = new double[8][8];
 
-	public void showIms(String[] args){
+	public void showIms(String[] args) {
 		int width = Integer.parseInt(args[1]);
 		int height = Integer.parseInt(args[2]);
 
 		img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-
+		img2 = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		try {
 			File file = new File(args[0]);
 			InputStream is = new FileInputStream(file);
 
 			long len = file.length();
-			byte[] bytes = new byte[(int)len];
+			byte[] bytes = new byte[(int) len];
 
 			int offset = 0;
 			int numRead = 0;
-			while (offset < bytes.length && (numRead=is.read(bytes, offset, bytes.length-offset)) >= 0) {
+			while (offset < bytes.length && (numRead = is.read(bytes, offset, bytes.length - offset)) >= 0) {
 				offset += numRead;
 			}
 
-
 			int ind = 0;
-			for(int y = 0; y < height; y++){
+			for (int y = 0; y < height; y++) {
 
-				for(int x = 0; x < width; x++){
+				for (int x = 0; x < width; x++) {
 
 					byte a = 0;
 					byte r = bytes[ind];
-					byte g = bytes[ind+height*width];
-					byte b = bytes[ind+height*width*2]; 
+					byte g = bytes[ind + height * width];
+					byte b = bytes[ind + height * width * 2];
 
 					int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
-					//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
-					img.setRGB(x,y,pix);
+					// int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+					img.setRGB(x, y, pix);
 					ind++;
 				}
 			}
-
 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -66,7 +66,8 @@ public class Image_Reader {
 		JLabel lbText2 = new JLabel("Image after modification (Right)");
 		lbText2.setHorizontalAlignment(SwingConstants.CENTER);
 		lbIm1 = new JLabel(new ImageIcon(img));
-		lbIm2 = new JLabel(new ImageIcon(img));
+		lbIm2 = new JLabel(new ImageIcon(img2));
+		// img2=null;
 
 		GridBagConstraints c = new GridBagConstraints();
 		c.fill = GridBagConstraints.HORIZONTAL;
@@ -98,9 +99,78 @@ public class Image_Reader {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 
+	public void setCosines() {
+
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				Cosines[i][j] = Math.cos((2 * i + 1) * j * 3.14159 / 16.00);
+			}
+		}
+
+	}
+
+	public BufferedImage encodeDCT(int Quant) {
+		int[][][] iaDCTImage = new int[512][512][3];
+		int iH = img.getHeight();
+		int iW = img.getWidth();
+
+		for (int i = 0; i < iW; i += 8) {
+			for (int j = 0; j < iH; j += 8) {
+				for (int u = 0; u < 8; u++) {
+					for (int v = 0; v < 8; v++) {
+						float fCu = 1.0f, fCv = 1.0f;
+						float fRRes = 0.00f, fGRes = 0.00f, fBRes = 0.00f;
+
+						if (u == 0)
+							fCu = 0.707f;
+						if (v == 0)
+							fCv = 0.707f;
+						for (int x = 0; x < 8; x++) {
+							for (int y = 0; y < 8; y++) {
+								int iR, iG, iB;
+
+								iR = (img.getRGB(i + x, j + y) >> 16) & 0xFF;
+								iG = (img.getRGB(i + x, j + y) >> 8) & 0xFF;
+								iB = img.getRGB(i + x, j + y) & 0xFF;
+
+								fRRes += iR * Cosines[x][u] * Cosines[y][v];
+								fGRes += iG * Cosines[x][u] * Cosines[y][v];
+								fBRes += iB * Cosines[x][u] * Cosines[y][v];
+
+							}
+						}
+						iaDCTImage[i + u][j + v][0] = (int) Math.round(fRRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
+						iaDCTImage[i + u][j + v][1] = (int) Math.round(fGRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
+						iaDCTImage[i + u][j + v][2] = (int) Math.round(fBRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
+					}
+				}
+			}
+		}
+		for (int i = 0; i < iW; i++) {
+			for (int j = 0; j < iH; j++) {
+				int iColor = 0xff000000 | ((iaDCTImage[i][j][0] & 0xff) << 16) | ((iaDCTImage[i][j][1] & 0xff) << 8)
+						| (iaDCTImage[i][j][2] & 0xff);
+
+				img2.setRGB(i, j, iColor);
+			}
+		}
+		return img2;
+
+	}
+
 	public static void main(String[] args) {
 		Image_Reader ren = new Image_Reader();
+		//
+		ren.setCosines();
 		ren.showIms(args);
+	
+		ren.lbIm2 = new JLabel(new ImageIcon(	ren.encodeDCT(0)));
+		
+		 ren.frame.revalidate();
+		 ren.frame.repaint();
+		// ren.frame.add(new JLabel(new ImageIcon(ren.encodeDCT(ren.img, 0))));
+		// ren.encodeDCT(ren.img, 0);
+		// ren.lbIm2 = new JLabel(new ImageIcon(ren.img2));
 	}
 
 }
