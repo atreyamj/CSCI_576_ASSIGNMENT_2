@@ -95,7 +95,7 @@ public class Image_Reader {
 		frame.getContentPane().add(lbIm2, c);
 
 		frame.pack();
-		frame.setVisible(true);
+		//frame.setVisible(true);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 
@@ -109,11 +109,12 @@ public class Image_Reader {
 
 	}
 
-	public BufferedImage encodeDCT(int Quant) {
+	public BufferedImage encodeDCT() {
 		int[][][] iaDCTImage = new int[512][512][3];
 		int iH = img.getHeight();
 		int iW = img.getWidth();
-
+		int m=0,n=0;
+		int[][] ImagePix=new int[iH][iW];
 		for (int i = 0; i < iW; i += 8) {
 			for (int j = 0; j < iH; j += 8) {
 				for (int u = 0; u < 8; u++) {
@@ -136,21 +137,24 @@ public class Image_Reader {
 								fRRes += iR * Cosines[x][u] * Cosines[y][v];
 								fGRes += iG * Cosines[x][u] * Cosines[y][v];
 								fBRes += iB * Cosines[x][u] * Cosines[y][v];
-
+								
 							}
 						}
-						iaDCTImage[i + u][j + v][0] = (int) Math.round(fRRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
+						
+						/*iaDCTImage[i + u][j + v][0] = (int) Math.round(fRRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
 						iaDCTImage[i + u][j + v][1] = (int) Math.round(fGRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
-						iaDCTImage[i + u][j + v][2] = (int) Math.round(fBRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
+						iaDCTImage[i + u][j + v][2] = (int) Math.round(fBRes * 0.25 * fCu * fCv / Math.pow(2, Quant));*/
+						iaDCTImage[i + u][j + v][0] = (int) Math.round(fRRes );
+						iaDCTImage[i + u][j + v][1] = (int) Math.round(fGRes );
+						iaDCTImage[i + u][j + v][2] = (int) Math.round(fBRes );
 					}
 				}
 			}
 		}
 		for (int i = 0; i < iW; i++) {
 			for (int j = 0; j < iH; j++) {
-				int iColor = 0xff000000 | ((iaDCTImage[i][j][0] & 0xff) << 16) | ((iaDCTImage[i][j][1] & 0xff) << 8)
-						| (iaDCTImage[i][j][2] & 0xff);
-
+				 int iColor = 0xff000000 | ((iaDCTImage[i][j][0] & 0xff) << 16) | ((iaDCTImage[i][j][1] & 0xff) << 8) | (iaDCTImage[i][j][2] & 0xff);
+	                
 				img2.setRGB(i, j, iColor);
 			}
 		}
@@ -163,11 +167,12 @@ public class Image_Reader {
 		//
 		ren.setCosines();
 		ren.showIms(args);
-	
-		ren.lbIm2 = new JLabel(new ImageIcon(	ren.encodeDCT(0)));
+		ren.frame.setVisible(false);
+		ren.lbIm2 = new JLabel(new ImageIcon(	ren.encodeDCT()));
 		
 		 ren.frame.revalidate();
 		 ren.frame.repaint();
+		 ren.frame.setVisible(true);
 		// ren.frame.add(new JLabel(new ImageIcon(ren.encodeDCT(ren.img, 0))));
 		// ren.encodeDCT(ren.img, 0);
 		// ren.lbIm2 = new JLabel(new ImageIcon(ren.img2));
