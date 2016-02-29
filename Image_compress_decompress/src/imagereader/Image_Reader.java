@@ -109,7 +109,7 @@ public class Image_Reader {
 
 	}
 
-	public BufferedImage encodeDCT() {
+	public int[][][] encodeDCT(int Quant) {
 		int[][][] iaDCTImage = new int[512][512][3];
 		int iH = img.getHeight();
 		int iW = img.getWidth();
@@ -141,12 +141,12 @@ public class Image_Reader {
 							}
 						}
 						
-						/*iaDCTImage[i + u][j + v][0] = (int) Math.round(fRRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
-						iaDCTImage[i + u][j + v][1] = (int) Math.round(fGRes * 0.25 * fCu * fCv / Math.pow(2, Quant));
-						iaDCTImage[i + u][j + v][2] = (int) Math.round(fBRes * 0.25 * fCu * fCv / Math.pow(2, Quant));*/
-						iaDCTImage[i + u][j + v][0] = (int) Math.round(fRRes );
+						iaDCTImage[i + u][j + v][0] = (int) Math.round(fRRes * 0.25 * fCu * fCv /Quant);
+						iaDCTImage[i + u][j + v][1] = (int) Math.round(fGRes * 0.25 * fCu * fCv / Quant);
+						iaDCTImage[i + u][j + v][2] = (int) Math.round(fBRes * 0.25 * fCu * fCv / Quant);
+						/*iaDCTImage[i + u][j + v][0] = (int) Math.round(fRRes );
 						iaDCTImage[i + u][j + v][1] = (int) Math.round(fGRes );
-						iaDCTImage[i + u][j + v][2] = (int) Math.round(fBRes );
+						iaDCTImage[i + u][j + v][2] = (int) Math.round(fBRes );*/
 					}
 				}
 			}
@@ -158,9 +158,101 @@ public class Image_Reader {
 				img2.setRGB(i, j, iColor);
 			}
 		}
-		return img2;
+		return iaDCTImage;
 
 	}
+	
+	   public  void IDCT_BLockWise(int[][][] iaDCT, int iQL, int iLat)
+	    {
+	        int[][][] iaIDCTImage = new int[512][512][3];
+	        int iH = img.getHeight();
+	        int iW = img.getWidth();
+	        
+	        BufferedImage imgOP = new BufferedImage(512, 512, img.getType());
+	        
+	        long iTime = System.currentTimeMillis();
+	        for(int i = 0;i<iH;i+=8)
+	        {
+	            for(int j = 0;j<iW;j+=8)
+	            {                                    
+	                for(int x = 0;x<8;x++)
+	                {
+	                    for(int y = 0;y<8;y++)
+	                    {                                                
+	                        float fRRes = 0.00f, fGRes = 0.00f, fBRes = 0.00f;                                                    
+	                        
+	                        for(int u = 0;u<8;u++)
+	                        {
+	                            for(int v = 0;v<8;v++)
+	                            {
+	                            	if(u+v>=iLat)
+	                            	{
+	                            		break;
+	                            	}
+	                                float fCu = 1.0f, fCv = 1.0f;                                
+	                                if(u == 0)
+	                                    fCu =  0.707f;
+	                                if(v == 0)
+	                                    fCv = 0.707f;
+	                                
+	                                double iR, iG, iB;                                                                                                
+	                                    
+	                                iR = iaDCT[j + u][i + v][0] *  iQL;
+	                                iG = iaDCT[j + u][i + v][1] * iQL;
+	                                iB = iaDCT[j + u][i + v][2] *  iQL;                                    
+	                                
+	                                //IDCT Logic                               
+	                                fRRes += fCu * fCv * iR * Cosines[x][u]*Cosines[y][v];
+	                                fGRes += fCu * fCv * iG * Cosines[x][u]*Cosines[y][v];
+	                                fBRes += fCu * fCv * iB * Cosines[x][u]*Cosines[y][v];
+	                            }
+	                        }
+	                        
+	                        fRRes *= 0.25;
+	                        fGRes *= 0.25;
+	                        fBRes *= 0.25;                        
+	                        
+	                        if(fRRes <= 0)
+	                            fRRes = 0;
+	                        else if(fRRes >= 255)
+	                            fRRes = 255;
+	                            
+	                        if(fGRes <= 0)
+	                            fGRes = 0;
+	                        else if(fGRes >= 255)
+	                            fGRes = 255;
+	                            
+	                        if(fBRes <= 0)
+	                            fBRes = 0;
+	                        else if(fBRes >= 255)
+	                            fBRes = 255; 
+	                        
+	                        iaIDCTImage[j + x][i + y][0]  = (int)fRRes;
+	                        iaIDCTImage[j + x][i + y][1]  = (int)fGRes;
+	                        iaIDCTImage[j + x][i + y][2]  = (int)fBRes;
+	                        
+	                        int iColor = 0xff000000 | ((iaIDCTImage[j+x][i+y][0] & 0xff) << 16) | ((iaIDCTImage[j+x][i+y][1] & 0xff) << 8) | (iaIDCTImage[j+x][i+y][2] & 0xff);
+	                        img2.setRGB(j+x, i+y, iColor);
+	                    }
+	                }                                                              
+	            
+	              /*//  DisplayImage(, 1);
+	                try
+	                {
+	                    Thread.sleep((int) iLat);
+	                } 
+	                catch (InterruptedException ex) 
+	                {
+	                    Thread.currentThread().interrupt();
+	                } */
+	              //  img2=imgOP;
+	        		//img2=null;
+		       		frame.revalidate();
+		       		frame.repaint();
+		       		frame.setVisible(true);
+	            }                        
+	        }                                               
+	    }
 
 	public static void main(String[] args) {
 		Image_Reader ren = new Image_Reader();
@@ -168,14 +260,9 @@ public class Image_Reader {
 		ren.setCosines();
 		ren.showIms(args);
 		ren.frame.setVisible(false);
-		ren.lbIm2 = new JLabel(new ImageIcon(	ren.encodeDCT()));
+	
+		ren.IDCT_BLockWise(	ren.encodeDCT(1),1, (int)Math.round(Double.parseDouble(args[3])/262144*64));
 		
-		 ren.frame.revalidate();
-		 ren.frame.repaint();
-		 ren.frame.setVisible(true);
-		// ren.frame.add(new JLabel(new ImageIcon(ren.encodeDCT(ren.img, 0))));
-		// ren.encodeDCT(ren.img, 0);
-		// ren.lbIm2 = new JLabel(new ImageIcon(ren.img2));
 	}
 
 }
